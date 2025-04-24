@@ -3,14 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Platformer with Smart Enemies & Spacing</title>
+  <title>Platformer Game</title>
   <style>
-    body, html { margin: 0; padding: 0; overflow: hidden; }
-    #gameCanvas { background-color: #87CEEB; display: block; }
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    #gameCanvas {
+      background-color: #87CEEB;
+      display: block;
+    }
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 400px;
+      height: 600px;
+      display: none;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      text-align: center;
+      z-index: 2;
+      padding-top: 100px;
+    }
+    #overlay h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    #leaderboard {
+      margin-top: 30px;
+      font-size: 18px;
+    }
+    #playAgain {
+      padding: 10px 20px;
+      font-size: 18px;
+      margin-top: 20px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+<div id="overlay">
+  <h1>Game Over</h1>
+  <button id="playAgain">Play Again</button>
+  <div id="leaderboard">
+    <h3>Top 10 Scores</h3>
+    <ol id="scoreList"></ol>
+  </div>
+</div>
+
 <script>
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
@@ -23,13 +68,11 @@
   const safeJumpHeight = maxJumpHeight * 0.6;
   const minPlatformSpacing = Math.floor(safeJumpHeight);
 
-  // מרחק דינמי בין פלטפורמות לפי גובה במשחק
   function getDynamicSpacing(y) {
     const reduce = y * 0.0004;
     return Math.max(minPlatformSpacing * 0.6, minPlatformSpacing - reduce);
   }
 
-  // אויבים – שיבוץ לפי אינדקסים רנדומליים שנשמרו מראש
   const ENEMY_PERCENT = 0.05;
   const totalPlatformLimit = 10000;
   const enemyEvery = Math.floor(1 / ENEMY_PERCENT);
@@ -63,7 +106,6 @@
 
   let platforms = [];
 
-  // פלטפורמה ראשונה
   platforms.push({
     x: canvas.width / 2 - 50,
     y: lastPlatformY,
@@ -75,7 +117,6 @@
     enemy: null
   });
 
-  // יצירת פלטפורמות ראשוניות
   for (let i = 1; i < 30; i++) {
     const spacing = getDynamicSpacing(lastPlatformY);
     lastPlatformY -= spacing;
@@ -92,7 +133,6 @@
       enemy: null
     };
 
-    // אויב אם שייך לסט
     if (enemyIndices.has(index)) {
       const type = (type1Count <= type2Count) ? 1 : 2;
       if (type === 1) type1Count++; else type2Count++;
@@ -122,10 +162,33 @@
     keys[e.keyCode] = false;
   });
 
-  function resetGame() {
-    alert("Game Over! You touched an enemy.");
-    location.reload();
+  function saveScore(score) {
+    const scores = JSON.parse(localStorage.getItem("topScores") || "[]");
+    scores.push(score);
+    scores.sort((a, b) => b - a);
+    const top10 = scores.slice(0, 10);
+    localStorage.setItem("topScores", JSON.stringify(top10));
   }
+
+  function showGameOver() {
+    saveScore(score);
+    const overlay = document.getElementById('overlay');
+    const list = document.getElementById('scoreList');
+    const scores = JSON.parse(localStorage.getItem("topScores") || "[]");
+
+    list.innerHTML = '';
+    scores.forEach(s => {
+      const li = document.createElement('li');
+      li.textContent = s;
+      list.appendChild(li);
+    });
+
+    overlay.style.display = 'block';
+  }
+
+  document.getElementById('playAgain').addEventListener('click', () => {
+    location.reload();
+  });
 
   function updateGame() {
     if (isGameOver) return;
@@ -138,6 +201,12 @@
 
     player.x += player.velX;
     player.y += player.velY;
+
+    if (player.y > canvas.height) {
+      isGameOver = true;
+      showGameOver();
+      return;
+    }
 
     if (player.y < canvas.height / 4) {
       const shift = Math.abs(player.velY);
@@ -224,7 +293,6 @@
         platform.timeOnTop = 0;
       }
 
-      // Enemy type 2 movement
       if (platform.enemy && platform.enemy.type === 2) {
         const e = platform.enemy;
         e.x += e.dir * 1;
@@ -233,7 +301,6 @@
         }
       }
 
-      // Collision
       if (platform.enemy) {
         const e = platform.enemy;
         if (
@@ -243,12 +310,11 @@
           player.y + player.height > e.y
         ) {
           isGameOver = true;
-          resetGame();
+          showGameOver();
         }
       }
     });
 
-    // Draw
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = 'red';
     ctx.fillRect(player.x, player.y, player.width, player.height);
