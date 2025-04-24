@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Platformer with Falling Platforms</title>
+  <title>Platformer - Safe Spacing Fix</title>
   <style>
     body, html { margin: 0; padding: 0; overflow: hidden; }
     #gameCanvas { background-color: #87CEEB; display: block; }
@@ -19,10 +19,17 @@
   const friction = 0.8;
   const baseJump = -10;
 
+  const maxJumpHeight = Math.pow(Math.abs(baseJump), 2) / (2 * gravity); // תיאורטי
+  const safeJumpHeight = maxJumpHeight * 0.6; // בטוח יותר
+  const minPlatformSpacing = Math.floor(safeJumpHeight); // השימושי בפועל
+
   let score = 0;
   let worldOffset = 0;
   let maxPlatformHeightReached = 0;
   let lastLandingTime = performance.now();
+
+  let lastPlatformY = canvas.height - 120;
+  let nextPlatformIndex = 2;
 
   let player = {
     x: canvas.width / 2,
@@ -37,25 +44,26 @@
 
   let platforms = [];
 
-  // First stable platform
   platforms.push({
     x: canvas.width / 2 - 50,
-    y: canvas.height - 120,
+    y: lastPlatformY,
     width: 100,
     height: 10,
     timeOnTop: 0,
-    falling: false
+    falling: false,
+    index: 1
   });
 
-  // Additional platforms
-  for (let i = 1; i < 10; i++) {
+  for (let i = 1; i < 30; i++) {
+    lastPlatformY -= minPlatformSpacing;
     platforms.push({
       x: Math.random() * (canvas.width - 50),
-      y: canvas.height - 120 - i * 100,
+      y: lastPlatformY,
       width: 100,
       height: 10,
       timeOnTop: 0,
-      falling: false
+      falling: false,
+      index: nextPlatformIndex++
     });
   }
 
@@ -86,13 +94,16 @@
       const shift = Math.abs(player.velY);
       player.y += shift;
       worldOffset += shift;
+
       platforms.forEach(platform => {
         platform.y += shift;
         if (platform.y > canvas.height) {
-          platform.y = 0;
+          lastPlatformY -= minPlatformSpacing;
+          platform.y = lastPlatformY;
           platform.x = Math.random() * (canvas.width - platform.width);
           platform.falling = false;
           platform.timeOnTop = 0;
+          platform.index = nextPlatformIndex++;
         }
       });
     }
@@ -107,13 +118,11 @@
     }
 
     platforms.forEach(platform => {
-      // Falling platforms fall!
       if (platform.falling) {
         platform.y += 5;
         return;
       }
 
-      // Collision check
       if (
         player.x < platform.x + platform.width &&
         player.x + player.width > platform.x &&
@@ -139,24 +148,29 @@
           maxPlatformHeightReached = platformWorldHeight;
         }
 
-        platform.timeOnTop += 1 / 60; // assuming ~60fps
+        platform.timeOnTop += 1 / 60;
         if (platform.timeOnTop >= 4) {
           platform.falling = true;
         }
       } else {
-        platform.timeOnTop = 0; // reset if not on platform
+        platform.timeOnTop = 0;
       }
     });
 
-    // Draw everything
+    // Draw
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     ctx.fillStyle = 'red';
     ctx.fillRect(player.x, player.y, player.width, player.height);
 
     platforms.forEach(platform => {
       ctx.fillStyle = platform.falling ? 'gray' : 'black';
       ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+
+      if (platform.index % 10 === 0) {
+        ctx.fillStyle = "white";
+        ctx.font = "12px Arial";
+        ctx.fillText(`${platform.index}`, platform.x + platform.width / 2 - 8, platform.y - 5);
+      }
     });
 
     ctx.fillStyle = "white";
