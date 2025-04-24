@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Platformer - Safe Spacing Fix</title>
+  <title>Platformer with Smart Enemies & Spacing</title>
   <style>
     body, html { margin: 0; padding: 0; overflow: hidden; }
     #gameCanvas { background-color: #87CEEB; display: block; }
@@ -19,17 +19,36 @@
   const friction = 0.8;
   const baseJump = -10;
 
-  const maxJumpHeight = Math.pow(Math.abs(baseJump), 2) / (2 * gravity); // תיאורטי
-  const safeJumpHeight = maxJumpHeight * 0.6; // בטוח יותר
-  const minPlatformSpacing = Math.floor(safeJumpHeight); // השימושי בפועל
+  const maxJumpHeight = Math.pow(Math.abs(baseJump), 2) / (2 * gravity);
+  const safeJumpHeight = maxJumpHeight * 0.6;
+  const minPlatformSpacing = Math.floor(safeJumpHeight);
+
+  // מרחק דינמי בין פלטפורמות לפי גובה במשחק
+  function getDynamicSpacing(y) {
+    const reduce = y * 0.0004;
+    return Math.max(minPlatformSpacing * 0.6, minPlatformSpacing - reduce);
+  }
+
+  // אויבים – שיבוץ לפי אינדקסים רנדומליים שנשמרו מראש
+  const ENEMY_PERCENT = 0.05;
+  const totalPlatformLimit = 10000;
+  const enemyEvery = Math.floor(1 / ENEMY_PERCENT);
+  const enemyIndices = new Set();
+  for (let i = 0; i < totalPlatformLimit / enemyEvery; i++) {
+    const offset = Math.floor(Math.random() * enemyEvery);
+    enemyIndices.add(i * enemyEvery + offset);
+  }
+
+  let type1Count = 0;
+  let type2Count = 0;
 
   let score = 0;
   let worldOffset = 0;
   let maxPlatformHeightReached = 0;
   let lastLandingTime = performance.now();
-
   let lastPlatformY = canvas.height - 120;
   let nextPlatformIndex = 2;
+  let isGameOver = false;
 
   let player = {
     x: canvas.width / 2,
@@ -44,6 +63,7 @@
 
   let platforms = [];
 
+  // פלטפורמה ראשונה
   platforms.push({
     x: canvas.width / 2 - 50,
     y: lastPlatformY,
@@ -51,26 +71,48 @@
     height: 10,
     timeOnTop: 0,
     falling: false,
-    index: 1
+    index: 1,
+    enemy: null
   });
 
+  // יצירת פלטפורמות ראשוניות
   for (let i = 1; i < 30; i++) {
-    lastPlatformY -= minPlatformSpacing;
-    platforms.push({
+    const spacing = getDynamicSpacing(lastPlatformY);
+    lastPlatformY -= spacing;
+
+    const index = nextPlatformIndex++;
+    const platform = {
       x: Math.random() * (canvas.width - 50),
       y: lastPlatformY,
       width: 100,
       height: 10,
       timeOnTop: 0,
       falling: false,
-      index: nextPlatformIndex++
-    });
+      index: index,
+      enemy: null
+    };
+
+    // אויב אם שייך לסט
+    if (enemyIndices.has(index)) {
+      const type = (type1Count <= type2Count) ? 1 : 2;
+      if (type === 1) type1Count++; else type2Count++;
+      platform.enemy = {
+        type: type,
+        x: platform.x + 10,
+        y: platform.y - 20,
+        width: 20,
+        height: 20,
+        dir: 1
+      };
+    }
+
+    platforms.push(platform);
   }
 
   let keys = [];
   window.addEventListener('keydown', function (e) {
     keys[e.keyCode] = true;
-    if (e.keyCode === 32 && !player.jumping) {
+    if (e.keyCode === 32 && !player.jumping && !isGameOver) {
       player.jumping = true;
       player.velY = baseJump - Math.abs(player.velX);
     }
@@ -80,7 +122,14 @@
     keys[e.keyCode] = false;
   });
 
+  function resetGame() {
+    alert("Game Over! You touched an enemy.");
+    location.reload();
+  }
+
   function updateGame() {
+    if (isGameOver) return;
+
     if (keys[39]) { if (player.velX < player.speed) player.velX++; }
     if (keys[37]) { if (player.velX > -player.speed) player.velX--; }
 
@@ -97,13 +146,31 @@
 
       platforms.forEach(platform => {
         platform.y += shift;
+        if (platform.enemy) platform.enemy.y += shift;
+
         if (platform.y > canvas.height) {
-          lastPlatformY -= minPlatformSpacing;
+          const spacing = getDynamicSpacing(lastPlatformY);
+          lastPlatformY -= spacing;
+
           platform.y = lastPlatformY;
           platform.x = Math.random() * (canvas.width - platform.width);
           platform.falling = false;
           platform.timeOnTop = 0;
           platform.index = nextPlatformIndex++;
+          platform.enemy = null;
+
+          if (enemyIndices.has(platform.index)) {
+            const type = (type1Count <= type2Count) ? 1 : 2;
+            if (type === 1) type1Count++; else type2Count++;
+            platform.enemy = {
+              type: type,
+              x: platform.x + 10,
+              y: platform.y - 20,
+              width: 20,
+              height: 20,
+              dir: 1
+            };
+          }
         }
       });
     }
@@ -120,6 +187,7 @@
     platforms.forEach(platform => {
       if (platform.falling) {
         platform.y += 5;
+        if (platform.enemy) platform.enemy.y += 5;
         return;
       }
 
@@ -155,6 +223,29 @@
       } else {
         platform.timeOnTop = 0;
       }
+
+      // Enemy type 2 movement
+      if (platform.enemy && platform.enemy.type === 2) {
+        const e = platform.enemy;
+        e.x += e.dir * 1;
+        if (e.x < platform.x || e.x + e.width > platform.x + platform.width) {
+          e.dir *= -1;
+        }
+      }
+
+      // Collision
+      if (platform.enemy) {
+        const e = platform.enemy;
+        if (
+          player.x < e.x + e.width &&
+          player.x + player.width > e.x &&
+          player.y < e.y + e.height &&
+          player.y + player.height > e.y
+        ) {
+          isGameOver = true;
+          resetGame();
+        }
+      }
     });
 
     // Draw
@@ -170,6 +261,11 @@
         ctx.fillStyle = "white";
         ctx.font = "12px Arial";
         ctx.fillText(`${platform.index}`, platform.x + platform.width / 2 - 8, platform.y - 5);
+      }
+
+      if (platform.enemy) {
+        ctx.fillStyle = platform.enemy.type === 1 ? 'purple' : 'orange';
+        ctx.fillRect(platform.enemy.x, platform.enemy.y, platform.enemy.width, platform.enemy.height);
       }
     });
 
