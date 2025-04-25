@@ -76,6 +76,10 @@
   const backgroundImage = new Image();
   backgroundImage.src = 'background_rainbow.png';
 
+  // Load player image
+  const playerImage = new Image();
+  playerImage.src = 'Sarit_player.png';
+
   const gravity = 0.5;
   const friction = 0.8;
   const baseJump = -10;
@@ -111,9 +115,9 @@
 
   let player = {
     x: canvas.width / 2,
-    y: canvas.height - 20,
-    width: 20,
-    height: 20,
+    y: canvas.height - 40,
+    width: 40,
+    height: 40,
     speed: 5,
     velX: 0,
     velY: 0,
@@ -209,10 +213,8 @@
   function updateGame() {
     if (isGameOver) return;
 
-    // Draw background instead of clearing screen
     ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
 
-    // Game logic (movement, collisions, etc.)
     if (keys[39]) { if (player.velX < player.speed) player.velX++; }
     if (keys[37]) { if (player.velX > -player.speed) player.velX--; }
 
@@ -335,9 +337,8 @@
       }
     });
 
-    // Draw player
-    ctx.fillStyle = 'red';
-    ctx.fillRect(player.x, player.y, player.width, player.height);
+    // Draw player as image
+    ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
 
     // Draw platforms and enemies
     platforms.forEach(platform => {
