@@ -72,19 +72,32 @@
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
 
-  // Load background image
   const backgroundImage = new Image();
   backgroundImage.src = 'background_rainbow.png';
 
-  // Load player image
   const playerImage = new Image();
   playerImage.src = 'Sarit_player.png';
 
   const bezalelEnemyImg = new Image();
   bezalelEnemyImg.src = 'Bezalel_enemy.png';
-  
+
   const eyalEnemyImg = new Image();
   eyalEnemyImg.src = 'Eyal_enemy.png';
+
+  const flagImages = [
+    'GayFlag.png',
+    'AbinaryFlag.png',
+    'LesbianFlag.png',
+    'TransFlag.png'
+  ].map(src => {
+    const img = new Image();
+    img.src = src;
+    return img;
+  });
+
+  document.getElementById('playAgain').addEventListener('click', () => {
+    window.location.href = window.location.href;
+  });
 
   const gravity = 0.5;
   const friction = 0.8;
@@ -110,7 +123,6 @@
 
   let type1Count = 0;
   let type2Count = 0;
-
   let score = 0;
   let worldOffset = 0;
   let maxPlatformHeightReached = 0;
@@ -135,12 +147,13 @@
   platforms.push({
     x: canvas.width / 2 - 50,
     y: lastPlatformY,
-    width: 100,
-    height: 10,
+    width: 120,
+    height: 20,
     timeOnTop: 0,
     falling: false,
     index: 1,
-    enemy: null
+    enemy: null,
+    flagIndex: Math.floor(Math.random() * flagImages.length)
   });
 
   for (let i = 1; i < 30; i++) {
@@ -149,14 +162,15 @@
 
     const index = nextPlatformIndex++;
     const platform = {
-      x: Math.random() * (canvas.width - 50),
+      x: Math.random() * (canvas.width - 120),
       y: lastPlatformY,
-      width: 100,
-      height: 10,
+      width: 120,
+      height: 20,
       timeOnTop: 0,
       falling: false,
       index: index,
-      enemy: null
+      enemy: null,
+      flagIndex: Math.floor(Math.random() * flagImages.length)
     };
 
     if (enemyIndices.has(index)) {
@@ -166,7 +180,7 @@
         type: type,
         x: platform.x + 10,
         y: platform.y - 30,
-        width: 30 ,
+        width: 30,
         height: 30,
         dir: 1
       };
@@ -176,24 +190,20 @@
   }
 
   let keys = [];
-  window.addEventListener('keydown', function (e) {
+  window.addEventListener('keydown', e => {
     keys[e.keyCode] = true;
     if (e.keyCode === 32 && !player.jumping && !isGameOver) {
       player.jumping = true;
       player.velY = baseJump - Math.abs(player.velX);
     }
   });
-
-  window.addEventListener('keyup', function (e) {
-    keys[e.keyCode] = false;
-  });
+  window.addEventListener('keyup', e => keys[e.keyCode] = false);
 
   function saveScore(score) {
     const scores = JSON.parse(localStorage.getItem("topScores") || "[]");
     scores.push(score);
     scores.sort((a, b) => b - a);
-    const top10 = scores.slice(0, 10);
-    localStorage.setItem("topScores", JSON.stringify(top10));
+    localStorage.setItem("topScores", JSON.stringify(scores.slice(0, 10)));
   }
 
   function showGameOver() {
@@ -201,28 +211,22 @@
     const overlay = document.getElementById('overlay');
     const list = document.getElementById('scoreList');
     const scores = JSON.parse(localStorage.getItem("topScores") || "[]");
-
     list.innerHTML = '';
     scores.forEach((s, i) => {
       const li = document.createElement('li');
       li.innerHTML = `<span>${i + 1}.</span><span>${s}</span>`;
       list.appendChild(li);
     });
-
     overlay.style.display = 'block';
   }
-
-  document.getElementById('playAgain').addEventListener('click', () => {
-    location.reload();
-  });
 
   function updateGame() {
     if (isGameOver) return;
 
     ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
 
-    if (keys[39]) { if (player.velX < player.speed) player.velX++; }
-    if (keys[37]) { if (player.velX > -player.speed) player.velX--; }
+    if (keys[39]) if (player.velX < player.speed) player.velX++;
+    if (keys[37]) if (player.velX > -player.speed) player.velX--;
 
     player.velX *= friction;
     player.velY += gravity;
@@ -248,12 +252,12 @@
         if (platform.y > canvas.height) {
           const spacing = getDynamicSpacing(lastPlatformY);
           lastPlatformY -= spacing;
-
           platform.y = lastPlatformY;
           platform.x = Math.random() * (canvas.width - platform.width);
           platform.falling = false;
           platform.timeOnTop = 0;
           platform.index = nextPlatformIndex++;
+          platform.flagIndex = Math.floor(Math.random() * flagImages.length);
           platform.enemy = null;
 
           if (enemyIndices.has(platform.index)) {
@@ -262,9 +266,9 @@
             platform.enemy = {
               type: type,
               x: platform.x + 10,
-              y: platform.y - 20,
-              width: 20,
-              height: 20,
+              y: platform.y - 30,
+              width: 30,
+              height: 30,
               dir: 1
             };
           }
@@ -304,19 +308,15 @@
           const now = performance.now();
           const timeDiff = (now - lastLandingTime) / 1000;
           lastLandingTime = now;
-
           const heightGain = platformWorldHeight - maxPlatformHeightReached;
           const speedBonus = Math.max(1, 3 - timeDiff);
           const points = Math.floor(heightGain * speedBonus);
-
           score += points;
           maxPlatformHeightReached = platformWorldHeight;
         }
 
         platform.timeOnTop += 1 / 60;
-        if (platform.timeOnTop >= 4) {
-          platform.falling = true;
-        }
+        if (platform.timeOnTop >= 4) platform.falling = true;
       } else {
         platform.timeOnTop = 0;
       }
@@ -324,9 +324,7 @@
       if (platform.enemy && platform.enemy.type === 2) {
         const e = platform.enemy;
         e.x += e.dir * 1;
-        if (e.x < platform.x || e.x + e.width > platform.x + platform.width) {
-          e.dir *= -1;
-        }
+        if (e.x < platform.x || e.x + e.width > platform.x + platform.width) e.dir *= -1;
       }
 
       if (platform.enemy) {
@@ -343,13 +341,18 @@
       }
     });
 
-    // Draw player as image
     ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
 
-    // Draw platforms and enemies
     platforms.forEach(platform => {
-      ctx.fillStyle = platform.falling ? 'gray' : 'black';
-      ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+      if (platform.falling) {
+        ctx.fillStyle = 'gray';
+        ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+      } else {
+        const flagImg = flagImages[platform.flagIndex];
+        if (flagImg.complete) {
+          ctx.drawImage(flagImg, platform.x, platform.y, platform.width, platform.height);
+        }
+      }
 
       if (platform.index % 10 === 0) {
         ctx.fillStyle = "white";
@@ -363,7 +366,6 @@
       }
     });
 
-    // Draw score
     ctx.fillStyle = "white";
     ctx.font = "20px Arial";
     ctx.fillText(`Score: ${score}`, 10, 30);
@@ -374,3 +376,4 @@
   updateGame();
 </script>
 </body>
+</html>
