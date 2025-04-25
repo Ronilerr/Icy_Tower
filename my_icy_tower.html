@@ -36,6 +36,19 @@
       margin-top: 30px;
       font-size: 18px;
     }
+    #scoreList {
+      list-style: none;
+      padding-left: 0;
+      text-align: left;
+      display: inline-block;
+      font-size: 18px;
+      font-family: monospace;
+    }
+    #scoreList li {
+      display: flex;
+      justify-content: space-between;
+      width: 120px;
+    }
     #playAgain {
       padding: 10px 20px;
       font-size: 18px;
@@ -177,9 +190,9 @@
     const scores = JSON.parse(localStorage.getItem("topScores") || "[]");
 
     list.innerHTML = '';
-    scores.forEach(s => {
+    scores.forEach((s, i) => {
       const li = document.createElement('li');
-      li.textContent = s;
+      li.innerHTML = `<span>${i + 1}.</span><span>${s}</span>`;
       list.appendChild(li);
     });
 
