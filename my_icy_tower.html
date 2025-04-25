@@ -95,6 +95,15 @@
     return img;
   });
 
+  const backgroundMusic = new Audio('Dana_music.mp3');
+  backgroundMusic.loop = true;
+  backgroundMusic.volume = 0.5;
+  backgroundMusic.play().catch(() => {
+    document.body.addEventListener('click', () => {
+        backgroundMusic.play();
+    }, { once: true });
+    });
+
   document.getElementById('playAgain').addEventListener('click', () => {
     window.location.href = window.location.href;
   });
