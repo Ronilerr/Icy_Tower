@@ -106,7 +106,7 @@ let player = {
 
 let platforms = [];
 platforms.push({
-  x: canvas.width / 2 - 60,
+  x: canvas.width / 2 - 50,
   y: lastPlatformY,
   width: 120,
   height: 20,
@@ -114,7 +114,8 @@ platforms.push({
   falling: false,
   index: 1,
   enemy: null,
-  flagIndex: Math.floor(Math.random() * flagImages.length)
+  flagIndex: Math.floor(Math.random() * flagImages.length),
+  moving: false
 });
 
 for (let i = 1; i < 30; i++) {
@@ -122,34 +123,36 @@ for (let i = 1; i < 30; i++) {
   lastPlatformY -= spacing;
   const index = nextPlatformIndex++;
   let width = 120;
-  let willBeWide = Math.random() < 0.1; 
+  const hasEnemy = enemyIndices.has(index);
+  const isWide = Math.random() < 0.1 && !hasEnemy;
+  if (isWide) width = 180;
 
   const platform = {
     x: Math.random() * (canvas.width - width),
     y: lastPlatformY,
-    width: width,
+    width,
     height: 20,
     timeOnTop: 0,
     falling: false,
-    index: index,
+    index,
     enemy: null,
-    flagIndex: Math.floor(Math.random() * flagImages.length)
+    flagIndex: Math.floor(Math.random() * flagImages.length),
+    moving: Math.random() < 0.06 && !hasEnemy,
+    direction: 1,
+    baseY: lastPlatformY
   };
 
-  if (enemyIndices.has(index)) {
+  if (hasEnemy) {
     const type = (type1Count <= type2Count) ? 1 : 2;
     if (type === 1) type1Count++; else type2Count++;
     platform.enemy = {
-      type: type,
+      type,
       x: platform.x + 10,
       y: platform.y - 30,
       width: 30,
       height: 30,
       dir: 1
     };
-  } else if (willBeWide) {
-    platform.width = 160;
-    platform.x = Math.random() * (canvas.width - platform.width);
   }
 
   platforms.push(platform);
@@ -164,6 +167,10 @@ window.addEventListener('keydown', e => {
   }
 });
 window.addEventListener('keyup', e => keys[e.keyCode] = false);
+
+document.getElementById('playAgain').addEventListener('click', () => {
+  location.reload();
+});
 
 function saveScore(score) {
   const scores = JSON.parse(localStorage.getItem("topScores") || "[]");
@@ -185,24 +192,15 @@ function showGameOver() {
   });
 }
 
-document.getElementById('playAgain').addEventListener('click', () => {
-  location.reload();
-});
-
 function updateGame() {
   if (isGameOver) return;
-
   ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-
   if (keys[39]) if (player.velX < player.speed) player.velX++;
   if (keys[37]) if (player.velX > -player.speed) player.velX--;
-
   player.velX *= friction;
   player.velY += gravity;
-
   player.x += player.velX;
   player.y += player.velY;
-
   if (player.y > canvas.height) {
     isGameOver = true;
     showGameOver();
@@ -213,35 +211,33 @@ function updateGame() {
     const shift = Math.abs(player.velY);
     player.y += shift;
     worldOffset += shift;
-
     platforms.forEach(platform => {
       platform.y += shift;
+      platform.baseY += shift;
       if (platform.enemy) platform.enemy.y += shift;
       if (platform.y > canvas.height) {
         const spacing = getDynamicSpacing(lastPlatformY);
         lastPlatformY -= spacing;
         platform.y = lastPlatformY;
+        platform.baseY = lastPlatformY;
         platform.x = Math.random() * (canvas.width - platform.width);
         platform.falling = false;
         platform.timeOnTop = 0;
         platform.index = nextPlatformIndex++;
         platform.flagIndex = Math.floor(Math.random() * flagImages.length);
         platform.enemy = null;
-
+        platform.moving = Math.random() < 0.06;
         if (enemyIndices.has(platform.index)) {
           const type = (type1Count <= type2Count) ? 1 : 2;
           if (type === 1) type1Count++; else type2Count++;
           platform.enemy = {
-            type: type,
+            type,
             x: platform.x + 10,
             y: platform.y - 30,
             width: 30,
             height: 30,
             dir: 1
           };
-        } else if (Math.random() < 0.1) {
-          platform.width = 160;
-          platform.x = Math.random() * (canvas.width - platform.width);
         }
       }
     });
@@ -257,6 +253,14 @@ function updateGame() {
   }
 
   platforms.forEach(platform => {
+    if (platform.moving) {
+      platform.y += platform.direction * 1.5;
+      if (platform.y > platform.baseY + 20 || platform.y < platform.baseY - 20) {
+        platform.direction *= -1;
+      }
+      if (platform.enemy) platform.enemy.y = platform.y - 30;
+    }
+
     if (platform.falling) {
       platform.y += 5;
       if (platform.enemy) platform.enemy.y += 5;
@@ -273,7 +277,6 @@ function updateGame() {
       player.jumping = false;
       player.velY = 0;
       player.y = platform.y - player.height;
-
       const platformWorldHeight = worldOffset + (canvas.height - platform.y);
       if (platformWorldHeight > maxPlatformHeightReached) {
         const now = performance.now();
@@ -285,7 +288,6 @@ function updateGame() {
         score += points;
         maxPlatformHeightReached = platformWorldHeight;
       }
-
       platform.timeOnTop += 1 / 60;
       if (platform.timeOnTop >= 4) platform.falling = true;
     } else {
@@ -324,13 +326,11 @@ function updateGame() {
         ctx.drawImage(flagImg, platform.x, platform.y, platform.width, platform.height);
       }
     }
-
     if (platform.index % 10 === 0) {
       ctx.fillStyle = "white";
       ctx.font = "12px Arial";
       ctx.fillText(`${platform.index}`, platform.x + platform.width / 2 - 8, platform.y - 5);
     }
-
     if (platform.enemy) {
       const img = platform.enemy.type === 1 ? bezalelEnemyImg : eyalEnemyImg;
       ctx.drawImage(img, platform.enemy.x, platform.enemy.y, platform.enemy.width, platform.enemy.height);
