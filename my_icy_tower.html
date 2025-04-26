@@ -65,18 +65,17 @@ milestoneSound.volume = 0.8;
 
 const gravity = 0.5;
 const friction = 0.8;
-const baseJump = -10;
+const baseJump = -12;
 
 let isInvincible = false;
 let invincibleEndTime = 0;
 
 const maxJumpHeight = Math.pow(Math.abs(baseJump), 2) / (2 * gravity);
 const safeJumpHeight = maxJumpHeight * 0.6;
-const minPlatformSpacing = Math.floor(safeJumpHeight);
+const minPlatformSpacing = safeJumpHeight * 0.6;
 
 function getDynamicSpacing(y) {
-  const reduce = y * 0.0004;
-  return Math.max(minPlatformSpacing * 0.6, minPlatformSpacing - reduce);
+    return minPlatformSpacing;
 }
 
 const ENEMY_PERCENT = 0.05;
