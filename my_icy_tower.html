@@ -47,6 +47,9 @@ eyalEnemyImg.src = 'Eyal_enemy.png';
 const starImage = new Image();
 starImage.src = 'star.png';
 
+const crownImage = new Image();
+crownImage.src = 'crown.png'; 
+
 const flagImages = [
   'GayFlag.png', 'AbinaryFlag.png', 'LesbianFlag.png', 'TransFlag.png'
 ].map(src => {
@@ -345,7 +348,9 @@ function updateGame() {
   });
 
   ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
-
+if (isInvincible) {
+  ctx.drawImage(crownImage, player.x + player.width / 2 - 10, player.y - 25, 20, 20);
+}
   platforms.forEach(platform => {
     if (platform.falling) {
       ctx.fillStyle = 'gray';
@@ -383,12 +388,7 @@ function updateGame() {
   ctx.textBaseline = "top";
   ctx.fillText(`Score: ${score}`, 20, 30);
 
-  if (isInvincible) {
-    ctx.drawImage(starImage, 120, 5, 20, 20);
-    ctx.fillStyle = "yellow";
-    ctx.font = "16px Arial";
-    ctx.fillText(`${Math.ceil((invincibleEndTime - Date.now()) / 1000)}s`, 145, 10);
-  }
+  
 
   requestAnimationFrame(updateGame);
 }
