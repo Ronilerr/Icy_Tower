@@ -106,7 +106,7 @@ let player = {
 
 let platforms = [];
 platforms.push({
-  x: canvas.width / 2 - 50,
+  x: canvas.width / 2 - 60,
   y: lastPlatformY,
   width: 120,
   height: 20,
@@ -121,10 +121,13 @@ for (let i = 1; i < 30; i++) {
   const spacing = getDynamicSpacing(lastPlatformY);
   lastPlatformY -= spacing;
   const index = nextPlatformIndex++;
+  let width = 120;
+  let willBeWide = Math.random() < 0.1; 
+
   const platform = {
-    x: Math.random() * (canvas.width - 120),
+    x: Math.random() * (canvas.width - width),
     y: lastPlatformY,
-    width: 120,
+    width: width,
     height: 20,
     timeOnTop: 0,
     falling: false,
@@ -132,6 +135,7 @@ for (let i = 1; i < 30; i++) {
     enemy: null,
     flagIndex: Math.floor(Math.random() * flagImages.length)
   };
+
   if (enemyIndices.has(index)) {
     const type = (type1Count <= type2Count) ? 1 : 2;
     if (type === 1) type1Count++; else type2Count++;
@@ -143,7 +147,11 @@ for (let i = 1; i < 30; i++) {
       height: 30,
       dir: 1
     };
+  } else if (willBeWide) {
+    platform.width = 160;
+    platform.x = Math.random() * (canvas.width - platform.width);
   }
+
   platforms.push(platform);
 }
 
@@ -219,6 +227,7 @@ function updateGame() {
         platform.index = nextPlatformIndex++;
         platform.flagIndex = Math.floor(Math.random() * flagImages.length);
         platform.enemy = null;
+
         if (enemyIndices.has(platform.index)) {
           const type = (type1Count <= type2Count) ? 1 : 2;
           if (type === 1) type1Count++; else type2Count++;
@@ -230,6 +239,9 @@ function updateGame() {
             height: 30,
             dir: 1
           };
+        } else if (Math.random() < 0.1) {
+          platform.width = 160;
+          platform.x = Math.random() * (canvas.width - platform.width);
         }
       }
     });
