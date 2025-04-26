@@ -50,6 +50,8 @@ starImage.src = 'star.png';
 const crownImage = new Image();
 crownImage.src = 'crown.png'; 
 
+const springImage = new Image();
+springImage.src = 'drum.png'; 
 const flagImages = [
   'GayFlag.png', 'AbinaryFlag.png', 'LesbianFlag.png', 'TransFlag.png'
 ].map(src => {
@@ -123,6 +125,7 @@ platforms.push({
   index: 1,
   enemy: null,
   hasStar: Math.random() < 0.1,
+  hasSpring: Math.random() < 0.04, 
   flagIndex: Math.floor(Math.random() * flagImages.length),
   moving: false
 });
@@ -319,6 +322,17 @@ function updateGame() {
   // Reset timing if the player is not standing
   platform.lastTouchTime = null;
 }
+if (platform.hasSpring) {
+  const springX = platform.x + platform.width / 2 - 10;
+  const springY = platform.y - 20;
+  if (player.x + player.width > springX &&
+      player.x < springX + 20 &&
+      player.y + player.height > springY &&
+      player.y < springY + 20) {
+    player.velY = -20; // קפיצה חזקה כלפי מעלה
+    platform.hasSpring = false; // הסר את הקפיץ אחרי שימוש
+  }
+}
 
     if (platform.hasStar) {
       if (player.x < platform.x + platform.width &&
@@ -373,6 +387,10 @@ if (isInvincible) {
     }
     if (platform.hasStar) {
       ctx.drawImage(starImage, platform.x + platform.width / 2 - 10, platform.y - 20, 20, 20);
+    }
+
+    if (platform.hasSpring) {
+      ctx.drawImage(springImage, platform.x + platform.width / 2 - 10, platform.y - 20, 20, 20);
     }
   });
 
