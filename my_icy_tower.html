@@ -44,6 +44,9 @@ bezalelEnemyImg.src = 'Bezalel_enemy.png';
 const eyalEnemyImg = new Image();
 eyalEnemyImg.src = 'Eyal_enemy.png';
 
+const starImage = new Image();
+starImage.src = 'star.png';
+
 const flagImages = [
   'GayFlag.png', 'AbinaryFlag.png', 'LesbianFlag.png', 'TransFlag.png'
 ].map(src => {
@@ -63,6 +66,9 @@ milestoneSound.volume = 0.8;
 const gravity = 0.5;
 const friction = 0.8;
 const baseJump = -10;
+
+let isInvincible = false;
+let invincibleEndTime = 0;
 
 const maxJumpHeight = Math.pow(Math.abs(baseJump), 2) / (2 * gravity);
 const safeJumpHeight = maxJumpHeight * 0.6;
@@ -114,6 +120,7 @@ platforms.push({
   falling: false,
   index: 1,
   enemy: null,
+  hasStar: Math.random() < 0.1,
   flagIndex: Math.floor(Math.random() * flagImages.length),
   moving: false
 });
@@ -136,6 +143,7 @@ for (let i = 1; i < 30; i++) {
     falling: false,
     index,
     enemy: null,
+    hasStar: Math.random() < 0.1,
     flagIndex: Math.floor(Math.random() * flagImages.length),
     moving: Math.random() < 0.06 && !hasEnemy,
     direction: 1,
@@ -194,6 +202,11 @@ function showGameOver() {
 
 function updateGame() {
   if (isGameOver) return;
+  
+  if (isInvincible && Date.now() > invincibleEndTime) {
+    isInvincible = false;
+  }
+
   ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
   if (keys[39]) if (player.velX < player.speed) player.velX++;
   if (keys[37]) if (player.velX > -player.speed) player.velX--;
@@ -201,6 +214,7 @@ function updateGame() {
   player.velY += gravity;
   player.x += player.velX;
   player.y += player.velY;
+
   if (player.y > canvas.height) {
     isGameOver = true;
     showGameOver();
@@ -224,6 +238,7 @@ function updateGame() {
         platform.falling = false;
         platform.timeOnTop = 0;
         platform.index = nextPlatformIndex++;
+        platform.hasStar = Math.random() < 0.1;
         platform.flagIndex = Math.floor(Math.random() * flagImages.length);
         platform.enemy = null;
         platform.moving = Math.random() < 0.06;
@@ -294,10 +309,15 @@ function updateGame() {
       platform.timeOnTop = 0;
     }
 
-    if (platform.enemy && platform.enemy.type === 2) {
-      const e = platform.enemy;
-      e.x += e.dir * 1;
-      if (e.x < platform.x || e.x + e.width > platform.x + platform.width) e.dir *= -1;
+    if (platform.hasStar) {
+      if (player.x < platform.x + platform.width &&
+          player.x + player.width > platform.x &&
+          player.y < platform.y &&
+          player.y + player.height > platform.y - 20) {
+        platform.hasStar = false;
+        isInvincible = true;
+        invincibleEndTime = Date.now() + 7000;
+      }
     }
 
     if (platform.enemy) {
@@ -308,8 +328,10 @@ function updateGame() {
         player.y < e.y + e.height &&
         player.y + player.height > e.y
       ) {
-        isGameOver = true;
-        showGameOver();
+        if (!isInvincible) {
+          isGameOver = true;
+          showGameOver();
+        }
       }
     }
   });
@@ -335,6 +357,9 @@ function updateGame() {
       const img = platform.enemy.type === 1 ? bezalelEnemyImg : eyalEnemyImg;
       ctx.drawImage(img, platform.enemy.x, platform.enemy.y, platform.enemy.width, platform.enemy.height);
     }
+    if (platform.hasStar) {
+      ctx.drawImage(starImage, platform.x + platform.width / 2 - 10, platform.y - 20, 20, 20);
+    }
   });
 
   const currentMilestone = Math.floor(score / 10);
@@ -346,6 +371,13 @@ function updateGame() {
   ctx.fillStyle = "white";
   ctx.font = "20px Arial";
   ctx.fillText(`Score: ${score}`, 10, 30);
+
+  if (isInvincible) {
+    ctx.drawImage(starImage, 120, 5, 20, 20);
+    ctx.fillStyle = "yellow";
+    ctx.font = "16px Arial";
+    ctx.fillText(`${Math.ceil((invincibleEndTime - Date.now()) / 1000)}s`, 145, 10);
+  }
 
   requestAnimationFrame(updateGame);
 }
