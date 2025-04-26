@@ -202,6 +202,8 @@ function showGameOver() {
 
 function updateGame() {
   if (isGameOver) return;
+
+  ctx.save();
   
   if (isInvincible && Date.now() > invincibleEndTime) {
     isInvincible = false;
@@ -349,10 +351,11 @@ function updateGame() {
       }
     }
     if (platform.index % 10 === 0) {
-      ctx.fillStyle = "white";
-      ctx.font = "12px Arial";
-      ctx.fillText(`${platform.index}`, platform.x + platform.width / 2 - 8, platform.y - 5);
-    }
+  ctx.fillStyle = "white";
+  ctx.font = "12px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(`${platform.index}`, platform.x + platform.width / 2, platform.y + platform.height + 15);
+}
     if (platform.enemy) {
       const img = platform.enemy.type === 1 ? bezalelEnemyImg : eyalEnemyImg;
       ctx.drawImage(img, platform.enemy.x, platform.enemy.y, platform.enemy.width, platform.enemy.height);
@@ -370,7 +373,9 @@ function updateGame() {
 
   ctx.fillStyle = "white";
   ctx.font = "20px Arial";
-  ctx.fillText(`Score: ${score}`, 10, 30);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillText(`Score: ${score}`, 20, 30);
 
   if (isInvincible) {
     ctx.drawImage(starImage, 120, 5, 20, 20);
