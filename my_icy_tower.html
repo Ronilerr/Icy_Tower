@@ -10,7 +10,15 @@
     #overlay { position: absolute; top: 0; left: 0; width: 400px; height: 600px; display: none; background: rgba(0,0,0,0.7); color: white; text-align: center; z-index: 2; padding-top: 100px; }
     #overlay h1 { font-size: 48px; margin-bottom: 20px; }
     #leaderboard { margin-top: 30px; font-size: 18px; }
-    #scoreList { list-style: none; padding-left: 0; text-align: left; display: inline-block; font-size: 18px; font-family: monospace; }
+    #scoreList {
+  list-style: none;
+  padding-left: 0;
+  margin: 20px auto 0;
+  text-align: center;
+  font-size: 18px;
+  font-family: monospace;
+  width: fit-content;
+}
     #scoreList li { display: flex; justify-content: space-between; width: 120px; }
     #playAgain { padding: 10px 20px; font-size: 18px; margin-top: 20px; cursor: pointer; }
   </style>
@@ -200,6 +208,10 @@ function showGameOver() {
   list.innerHTML = '';
   scores.forEach((s, i) => {
     const li = document.createElement('li');
+    li.style.display = 'flex';
+    li.style.justifyContent = 'center';
+    li.style.alignItems = 'center';
+    li.style.gap = '5px';
     li.innerHTML = `<span>${i + 1}.</span><span>${s}</span>`;
     list.appendChild(li);
   });
