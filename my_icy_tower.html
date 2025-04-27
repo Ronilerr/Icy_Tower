@@ -144,8 +144,8 @@ startButton.addEventListener('click', () => {
   backgroundMusic.play(); // Start playing background music
   isDying = false; // Reset dying state
   playerRotation = 0; // Reset player rotation
-  player.x = canvas.width / 2; // Reset player position
-  player.y = canvas.height - 40;
+  player.x = canvas.width / 2;
+  player.y = lastPlatformY - player.height;
   player.velX = 0;
   player.velY = 0;
   player.jumping = false;
@@ -155,23 +155,26 @@ startButton.addEventListener('click', () => {
   lastLandingTime = performance.now();
   platforms = []; // Reset platforms
   nextPlatformIndex = 2;
-  lastPlatformY = canvas.height - 120;
+  lastPlatformY = canvas.height - 40;
 
   // Create the first platform
-  platforms.push({
-    x: canvas.width / 2 - 50,
-    y: lastPlatformY,
-    width: 120,
-    height: 20,
-    timeOnTop: 0,
-    falling: false,
-    index: 1,
-    enemy: null,
-    hasStar: Math.random() < 0.1, // 10% chance for star
-    hasSpring: Math.random() < 0.04, // 4% chance for spring
-    flagIndex: Math.floor(Math.random() * flagImages.length),
-    moving: false
-  });
+  const firstPlatform = {
+  x: canvas.width / 2 - 60, // Centered horizontally
+  y: canvas.height - 60, // A bit above the very bottom
+  width: 120,
+  height: 20,
+  timeOnTop: 0,
+  falling: false,
+  index: 1,
+  enemy: null,
+  hasStar: false,
+  hasSpring: false,
+  flagIndex: Math.floor(Math.random() * flagImages.length),
+  moving: false
+};
+platforms.push(firstPlatform);
+player.x = firstPlatform.x + firstPlatform.width / 2 - player.width / 2;
+player.y = firstPlatform.y - player.height;
 
   // Create the next 30 platforms
   for (let i = 1; i < 30; i++) {
@@ -459,9 +462,22 @@ function updateGame() {
   }
 
   // Start dying if player falls off the screen
-  if (player.y > canvas.height && !isDying) {
-    isDying = true;
+  if (player.y > canvas.height) {
+  if (!isDying) {
+    // אם נופל רגיל - פשוט סיים את המשחק ישר
+    isGameOver = true;
+    showGameOver();
+    return;
   }
+  // אם הוא כבר בתהליך גסיסה (מלהיתקל באויב למשל)
+  if (!pendingGameOver) {
+    pendingGameOver = true;
+    setTimeout(() => {
+      isGameOver = true;
+      showGameOver();
+    }, 1000); // אחרי שנייה
+  }
+}
 
   // Scroll the world if player goes above a certain height
   if (player.y < canvas.height / 4) {
@@ -509,11 +525,13 @@ function updateGame() {
   else if (player.x <= 0) player.x = 0;
 
   // Handle player landing on the ground
-  if (player.y >= canvas.height - player.height) {
-    player.y = canvas.height - player.height;
-    player.jumping = false;
-    player.velY = 0;
+  if (player.y > canvas.height) {
+  if (!isDying && !pendingGameOver) {
+    isGameOver = true;
+    showGameOver();
+    return;
   }
+}
 
   // --------- Platform and Enemy Updates ---------
   platforms.forEach(platform => {
@@ -563,9 +581,9 @@ function updateGame() {
       } else if (Date.now() - platform.lastTouchTime >= 4000) {
         platform.falling = true;
       }
-    } else {
-      platform.lastTouchTime = null;
-    }
+    } else if (!platform.moving) {
+  platform.lastTouchTime = null;
+}
 
     // Spring collision detection
     if (platform.hasSpring) {
