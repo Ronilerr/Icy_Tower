@@ -464,18 +464,18 @@ function updateGame() {
   // Start dying if player falls off the screen
   if (player.y > canvas.height) {
   if (!isDying) {
-    // אם נופל רגיל - פשוט סיים את המשחק ישר
+    // if falling regualry, game over
     isGameOver = true;
     showGameOver();
     return;
   }
-  // אם הוא כבר בתהליך גסיסה (מלהיתקל באויב למשל)
+  // if he is already dying
   if (!pendingGameOver) {
     pendingGameOver = true;
     setTimeout(() => {
       isGameOver = true;
       showGameOver();
-    }, 1000); // אחרי שנייה
+    }, 1000); // after second
   }
 }
 
