@@ -33,7 +33,7 @@
       height: 100vh;
       background:
         linear-gradient(180deg, rgba(255, 0, 128, 0.85), rgba(128, 0, 255, 0.85)),
-        url('pride.png') no-repeat center center;
+        url('data/pride.png') no-repeat center center;
       background-size: cover;
       color: white;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
@@ -228,8 +228,9 @@ player.y = firstPlatform.y - player.height;
     const spacing = getDynamicSpacing(lastPlatformY);
     lastPlatformY -= spacing;
     const index = nextPlatformIndex++;
+    const isSafo = isSafoMilestone(index);
     let width = 120;
-    const hasEnemy = enemyIndices.has(index);
+    const hasEnemy = !isSafo && enemyIndices.has(index);
     const isWide = Math.random() < 0.1 && !hasEnemy;
     if (isWide) width = 180;
     const platform = {
@@ -241,10 +242,10 @@ player.y = firstPlatform.y - player.height;
       falling: false,
       index,
       enemy: null,
-      hasStar: !hasEnemy && Math.random() < 0.1,
-      hasSpring: Math.random() < 0.04,
+      hasStar: !isSafo && !hasEnemy && Math.random() < 0.1,
+      hasSpring: !isSafo && Math.random() < 0.04,
       flagIndex: Math.floor(Math.random() * flagImages.length),
-      moving: Math.random() < 0.06 && !hasEnemy,
+      moving: !isSafo && Math.random() < 0.06 && !hasEnemy,
       direction: 1,
       baseY: lastPlatformY
     };
@@ -266,44 +267,47 @@ player.y = firstPlatform.y - player.height;
   updateGame(); // Start the game loop
 });
 
+// --------- ASSET PATHS ---------
+const DATA = 'data/';
+
 // --------- IMAGES ---------
 const backgroundImage = new Image();
-backgroundImage.src = 'background_rainbow.png';
+backgroundImage.src = DATA + 'background_rainbow.png';
 
 const playerImage = new Image();
-playerImage.src = 'Sarit_player.png';
+playerImage.src = DATA + 'Sarit_player.png';
 
 const bezalelEnemyImg = new Image();
-bezalelEnemyImg.src = 'Bezalel_enemy.png';
+bezalelEnemyImg.src = DATA + 'Bezalel_enemy.png';
 
 const eyalEnemyImg = new Image();
-eyalEnemyImg.src = 'Eyal_enemy.png';
+eyalEnemyImg.src = DATA + 'Eyal_enemy.png';
 
 const starImage = new Image();
-starImage.src = 'star.png';
+starImage.src = DATA + 'star.png';
 
 const crownImage = new Image();
-crownImage.src = 'crown.png'; 
+crownImage.src = DATA + 'crown.png';
 
 const springImage = new Image();
-springImage.src = 'drum.png'; 
+springImage.src = DATA + 'drum.png';
 
 // Load flag images
 const flagImages = [
   'GayFlag.png', 'AbinaryFlag.png', 'LesbianFlag.png', 'TransFlag.png'
 ].map(src => {
   const img = new Image();
-  img.src = src;
+  img.src = DATA + src;
   return img;
 });
 
 // --------- AUDIO ---------
-const backgroundMusic = new Audio('Dana_music.mp3');
+const backgroundMusic = new Audio(DATA + 'Dana_music.mp3');
 backgroundMusic.loop = true;
 backgroundMusic.volume = 0.3;
 backgroundMusic.play().catch(() => {});
 
-const milestoneSound = new Audio('Tarimii.mp3');
+const milestoneSound = new Audio(DATA + 'Tarimii.mp3');
 milestoneSound.volume = 0.8;
 
 // --------- PHYSICS CONSTANTS ---------
@@ -333,12 +337,23 @@ const SAFO_MESSAGES = [
 ];
 const SAFO_MESSAGE_INTERVAL = 20;
 
-function getSafoMessage(platformIndex) {
-  if (platformIndex % SAFO_MESSAGE_INTERVAL !== 0) return null;
-  return SAFO_MESSAGES[(platformIndex / SAFO_MESSAGE_INTERVAL - 1) % SAFO_MESSAGES.length];
+function isSafoMilestone(platformIndex) {
+  return platformIndex % SAFO_MESSAGE_INTERVAL === 0;
+}
+
+function isPlatformEmptyForSafo(platform) {
+  return !platform.enemy && !platform.hasStar && !platform.hasSpring;
+}
+
+function getSafoMessage(platform) {
+  if (!isSafoMilestone(platform.index)) return null;
+  if (!isPlatformEmptyForSafo(platform)) return null;
+  return SAFO_MESSAGES[(platform.index / SAFO_MESSAGE_INTERVAL - 1) % SAFO_MESSAGES.length];
 }
 
 function wrapTextLines(ctx, text, maxWidth) {
+  const prevDirection = ctx.direction;
+  ctx.direction = 'rtl';
   const words = text.split(' ');
   const lines = [];
   let line = words[0] || '';
@@ -352,29 +367,32 @@ function wrapTextLines(ctx, text, maxWidth) {
     }
   }
   if (line) lines.push(line);
+  ctx.direction = prevDirection;
   return lines;
 }
 
 function drawSafoMessage(platform, message) {
   const cx = platform.x + platform.width / 2;
-  const maxWidth = Math.max(platform.width - 6, 80);
-  const fontSize = message.length > 18 ? 8 : 10;
+  const maxWidth = Math.max(platform.width - 6, 100);
+  const fontSize = message.length > 18 ? 13 : 15;
   ctx.font = `bold ${fontSize}px Arial`;
   const lines = wrapTextLines(ctx, message, maxWidth);
-  const lineHeight = fontSize + 3;
+  const lineHeight = fontSize + 4;
   const blockHeight = lines.length * lineHeight;
-  const startY = platform.y - blockHeight - 4;
+  const startY = platform.y - blockHeight - 6;
 
   ctx.save();
+  ctx.direction = 'rtl';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   lines.forEach((line, i) => {
     const y = startY + i * lineHeight;
+    const rtlLine = '\u200F' + line;
     ctx.strokeStyle = 'black';
-    ctx.lineWidth = 3;
-    ctx.strokeText(line, cx, y);
-    ctx.fillStyle = '#fff200';
-    ctx.fillText(line, cx, y);
+    ctx.lineWidth = 4;
+    ctx.strokeText(rtlLine, cx, y);
+    ctx.fillStyle = '#ff69b4';
+    ctx.fillText(rtlLine, cx, y);
   });
   ctx.restore();
 }
@@ -438,8 +456,9 @@ for (let i = 1; i < 30; i++) {
   const spacing = getDynamicSpacing(lastPlatformY);
   lastPlatformY -= spacing;
   const index = nextPlatformIndex++;
+  const isSafo = isSafoMilestone(index);
   let width = 120;
-  const hasEnemy = enemyIndices.has(index);
+  const hasEnemy = !isSafo && enemyIndices.has(index);
   const isWide = Math.random() < 0.1 && !hasEnemy;
   if (isWide) width = 180;
   
@@ -452,10 +471,10 @@ for (let i = 1; i < 30; i++) {
     falling: false,
     index,
     enemy: null,
-    hasStar: !hasEnemy && Math.random() < 0.1,
-    hasSpring: Math.random() < 0.04,
+    hasStar: !isSafo && !hasEnemy && Math.random() < 0.1,
+    hasSpring: !isSafo && Math.random() < 0.04,
     flagIndex: Math.floor(Math.random() * flagImages.length),
-    moving: Math.random() < 0.06 && !hasEnemy,
+    moving: !isSafo && Math.random() < 0.06 && !hasEnemy,
     direction: 1,
     baseY: lastPlatformY
   };
@@ -602,11 +621,12 @@ function updateGame() {
         platform.falling = false;
         platform.timeOnTop = 0;
         platform.index = nextPlatformIndex++;
+        const isSafo = isSafoMilestone(platform.index);
         platform.flagIndex = Math.floor(Math.random() * flagImages.length);
         platform.enemy = null;
-        platform.moving = Math.random() < 0.06;
+        platform.moving = !isSafo && Math.random() < 0.06;
 
-        const hasEnemy = enemyIndices.has(platform.index);
+        const hasEnemy = !isSafo && enemyIndices.has(platform.index);
         if (hasEnemy) {
           const type = (type1Count <= type2Count) ? 1 : 2;
           if (type === 1) type1Count++; else type2Count++;
@@ -619,7 +639,8 @@ function updateGame() {
             dir: 1
           };
         }
-        platform.hasStar = !hasEnemy && Math.random() < 0.1;
+        platform.hasStar = !isSafo && !hasEnemy && Math.random() < 0.1;
+        platform.hasSpring = !isSafo && Math.random() < 0.04;
       }
     });
   }
@@ -758,8 +779,8 @@ function updateGame() {
       }
     }
 
-    // Safo reminder every 20 platforms
-    const safoMessage = getSafoMessage(platform.index);
+    // Safo reminder every 20 platforms (empty platforms only)
+    const safoMessage = getSafoMessage(platform);
     if (safoMessage) {
       drawSafoMessage(platform, safoMessage);
     }
