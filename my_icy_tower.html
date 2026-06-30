@@ -10,48 +10,70 @@
     body, html {
       margin: 0;
       padding: 0;
+      width: 100%;
+      height: 100%;
       overflow: hidden;
       font-family: Arial, sans-serif;
+      background: #000;
     }
 
     /* The game canvas where everything will be drawn */
     #gameCanvas {
       display: block;
+      width: 100vw;
+      height: 100vh;
     }
 
     /* Start screen overlay */
     #startOverlay {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
-      width: 400px;
-      height: 600px;
-      background: url('pride.png') no-repeat center center;
+      width: 100vw;
+      height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(255, 0, 128, 0.85), rgba(128, 0, 255, 0.85)),
+        url('pride.png') no-repeat center center;
       background-size: cover;
-      color: black;
+      color: white;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
       text-align: center;
-      padding-top: 200px;
       z-index: 3; /* Highest layer to be above everything */
+    }
+
+    #startOverlay h1 {
+      font-size: clamp(24px, 4vw, 48px);
+      max-width: 80%;
+      margin: 0 0 20px;
     }
 
     /* Start button style */
     #startButton {
       margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 20px;
+      padding: 12px 28px;
+      font-size: 22px;
+      font-weight: bold;
       cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background: white;
+      color: #6a0dad;
     }
 
     /* Game Over overlay */
     #overlay {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
-      width: 400px;
-      height: 600px;
-      background: none; /* transparent background */
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
       color: white;
-      display: flex;
+      display: none;
       flex-direction: column;
       justify-content: center;
       align-items: center;
@@ -116,7 +138,7 @@
 </div>
 
 <!-- Main Game Canvas -->
-<canvas id="gameCanvas" width="400" height="720"></canvas>
+<canvas id="gameCanvas"></canvas>
 
 <!-- Game Over Overlay (shows after losing) -->
 <div id="overlay">
@@ -131,12 +153,37 @@
 </div>
 
 <script>
+// --------- DISPLAY SETUP ---------
+const GAME_WIDTH = 400;
+const GAME_HEIGHT = 720;
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+function getDisplayTransform() {
+  const scale = Math.min(canvas.width / GAME_WIDTH, canvas.height / GAME_HEIGHT);
+  return {
+    scale,
+    offsetX: (canvas.width - GAME_WIDTH * scale) / 2,
+    offsetY: (canvas.height - GAME_HEIGHT * scale) / 2
+  };
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
 // --------- START OVERLAY SETUP ---------
 const startOverlay = document.getElementById('startOverlay');
 const startButton = document.getElementById('startButton');
 
 // When the user clicks the Play button
 startButton.addEventListener('click', () => {
+  document.documentElement.requestFullscreen?.().catch(() => {});
   startOverlay.style.display = 'none'; // Hide the start screen
   document.getElementById('overlay').style.display = 'none'; // Hide Game Over screen
   canvas.style.display = 'block'; // Show the game canvas
@@ -144,7 +191,7 @@ startButton.addEventListener('click', () => {
   backgroundMusic.play(); // Start playing background music
   isDying = false; // Reset dying state
   playerRotation = 0; // Reset player rotation
-  player.x = canvas.width / 2;
+  player.x = GAME_WIDTH / 2;
   player.y = lastPlatformY - player.height;
   player.velX = 0;
   player.velY = 0;
@@ -155,12 +202,12 @@ startButton.addEventListener('click', () => {
   lastLandingTime = performance.now();
   platforms = []; // Reset platforms
   nextPlatformIndex = 2;
-  lastPlatformY = canvas.height - 40;
+  lastPlatformY = GAME_HEIGHT - 40;
 
   // Create the first platform
   const firstPlatform = {
-  x: canvas.width / 2 - 60, // Centered horizontally
-  y: canvas.height - 60, // A bit above the very bottom
+  x: GAME_WIDTH / 2 - 60, // Centered horizontally
+  y: GAME_HEIGHT - 60, // A bit above the very bottom
   width: 120,
   height: 20,
   timeOnTop: 0,
@@ -186,7 +233,7 @@ player.y = firstPlatform.y - player.height;
     const isWide = Math.random() < 0.1 && !hasEnemy;
     if (isWide) width = 180;
     const platform = {
-      x: Math.random() * (canvas.width - width),
+      x: Math.random() * (GAME_WIDTH - width),
       y: lastPlatformY,
       width,
       height: 20,
@@ -194,7 +241,7 @@ player.y = firstPlatform.y - player.height;
       falling: false,
       index,
       enemy: null,
-      hasStar: Math.random() < 0.1,
+      hasStar: !hasEnemy && Math.random() < 0.1,
       hasSpring: Math.random() < 0.04,
       flagIndex: Math.floor(Math.random() * flagImages.length),
       moving: Math.random() < 0.06 && !hasEnemy,
@@ -218,10 +265,6 @@ player.y = firstPlatform.y - player.height;
   }
   updateGame(); // Start the game loop
 });
-
-// --------- CANVAS AND CONTEXT ---------
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
 
 // --------- IMAGES ---------
 const backgroundImage = new Image();
@@ -258,7 +301,7 @@ const flagImages = [
 const backgroundMusic = new Audio('Dana_music.mp3');
 backgroundMusic.loop = true;
 backgroundMusic.volume = 0.3;
-backgroundMusic.play();
+backgroundMusic.play().catch(() => {});
 
 const milestoneSound = new Audio('Tarimii.mp3');
 milestoneSound.volume = 0.8;
@@ -275,10 +318,65 @@ let invincibleEndTime = 0;
 // --------- PLATFORM SPACING ---------
 const maxJumpHeight = Math.pow(Math.abs(baseJump), 2) / (2 * gravity);
 const safeJumpHeight = maxJumpHeight * 0.6;
-const minPlatformSpacing = safeJumpHeight * 0.6;
+const minPlatformSpacing = safeJumpHeight * 0.82;
+const maxPlatformSpacing = safeJumpHeight * 0.95;
 
 function getDynamicSpacing(y) {
-  return minPlatformSpacing;
+  return minPlatformSpacing + Math.random() * (maxPlatformSpacing - minPlatformSpacing);
+}
+
+// --------- SAFO REMINDER MESSAGES (every 20 platforms) ---------
+const SAFO_MESSAGES = [
+  'קנית כבר כרטיס לסאפו?',
+  'נו קנית?',
+  'אל תחכי לרגע האחרון לא כדאי'
+];
+const SAFO_MESSAGE_INTERVAL = 20;
+
+function getSafoMessage(platformIndex) {
+  if (platformIndex % SAFO_MESSAGE_INTERVAL !== 0) return null;
+  return SAFO_MESSAGES[(platformIndex / SAFO_MESSAGE_INTERVAL - 1) % SAFO_MESSAGES.length];
+}
+
+function wrapTextLines(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let line = words[0] || '';
+  for (let i = 1; i < words.length; i++) {
+    const testLine = line + ' ' + words[i];
+    if (ctx.measureText(testLine).width <= maxWidth) {
+      line = testLine;
+    } else {
+      lines.push(line);
+      line = words[i];
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function drawSafoMessage(platform, message) {
+  const cx = platform.x + platform.width / 2;
+  const maxWidth = Math.max(platform.width - 6, 80);
+  const fontSize = message.length > 18 ? 8 : 10;
+  ctx.font = `bold ${fontSize}px Arial`;
+  const lines = wrapTextLines(ctx, message, maxWidth);
+  const lineHeight = fontSize + 3;
+  const blockHeight = lines.length * lineHeight;
+  const startY = platform.y - blockHeight - 4;
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  lines.forEach((line, i) => {
+    const y = startY + i * lineHeight;
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 3;
+    ctx.strokeText(line, cx, y);
+    ctx.fillStyle = '#fff200';
+    ctx.fillText(line, cx, y);
+  });
+  ctx.restore();
 }
 
 // --------- ENEMY GENERATION ---------
@@ -298,7 +396,7 @@ let score = 0;
 let worldOffset = 0;
 let maxPlatformHeightReached = 0;
 let lastLandingTime = performance.now();
-let lastPlatformY = canvas.height - 120;
+let lastPlatformY = GAME_HEIGHT - 120;
 let nextPlatformIndex = 2;
 let isGameOver = false;
 let lastMilestone = 0;
@@ -306,8 +404,8 @@ let pendingGameOver = false;
 
 // --------- PLAYER STATE ---------
 let player = {
-  x: canvas.width / 2,
-  y: canvas.height - 40,
+  x: GAME_WIDTH / 2,
+  y: GAME_HEIGHT - 40,
   width: 40,
   height: 40,
   speed: 5,
@@ -321,7 +419,7 @@ let playerRotation = 0;
 // --------- INITIAL PLATFORM ---------
 let platforms = [];
 platforms.push({
-  x: canvas.width / 2 - 50,
+  x: GAME_WIDTH / 2 - 50,
   y: lastPlatformY,
   width: 120,
   height: 20,
@@ -346,7 +444,7 @@ for (let i = 1; i < 30; i++) {
   if (isWide) width = 180;
   
   const platform = {
-    x: Math.random() * (canvas.width - width),
+    x: Math.random() * (GAME_WIDTH - width),
     y: lastPlatformY,
     width,
     height: 20,
@@ -354,7 +452,7 @@ for (let i = 1; i < 30; i++) {
     falling: false,
     index,
     enemy: null,
-    hasStar: Math.random() < 0.1,
+    hasStar: !hasEnemy && Math.random() < 0.1,
     hasSpring: Math.random() < 0.04,
     flagIndex: Math.floor(Math.random() * flagImages.length),
     moving: Math.random() < 0.06 && !hasEnemy,
@@ -404,7 +502,7 @@ function saveScore(score) {
 // --------- Function to display the Game Over screen ---------
 function showGameOver() {
   saveScore(score); // Save the current score into local storage
-  document.getElementById('overlay').style.display = 'block'; // Show the Game Over overlay
+  document.getElementById('overlay').style.display = 'flex'; // Show the Game Over overlay
   backgroundMusic.pause(); // Pause the background music
   
   // Load the top scores from local storage
@@ -428,7 +526,12 @@ function showGameOver() {
 function updateGame() {
   if (isGameOver) return; // Stop updating if the game is over
 
-  ctx.save(); // Save the current drawing state
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const { scale, offsetX, offsetY } = getDisplayTransform();
+  ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
 
   // Handle ending of invincibility
   if (isInvincible && Date.now() > invincibleEndTime) {
@@ -436,7 +539,7 @@ function updateGame() {
   }
 
   // Draw background
-  ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(backgroundImage, 0, 0, GAME_WIDTH, GAME_HEIGHT);
 
   // Handle player movement
   if (keys[39]) if (player.velX < player.speed) player.velX++;
@@ -452,7 +555,7 @@ function updateGame() {
     player.y += player.velY;
     playerRotation += 0.2; // Continue rotating the player
 
-    if (player.y > canvas.height && !pendingGameOver) {
+    if (player.y > GAME_HEIGHT && !pendingGameOver) {
       pendingGameOver = true;
       setTimeout(() => {
           isGameOver = true;
@@ -462,7 +565,7 @@ function updateGame() {
   }
 
   // Start dying if player falls off the screen
-  if (player.y > canvas.height) {
+  if (player.y > GAME_HEIGHT) {
   if (!isDying) {
     // if falling regualry, game over
     isGameOver = true;
@@ -480,7 +583,7 @@ function updateGame() {
 }
 
   // Scroll the world if player goes above a certain height
-  if (player.y < canvas.height / 4) {
+  if (player.y < GAME_HEIGHT / 4) {
     const shift = Math.abs(player.velY);
     player.y += shift;
     worldOffset += shift;
@@ -490,21 +593,21 @@ function updateGame() {
       if (platform.enemy) platform.enemy.y += shift;
       
       // Recycle platform if it goes off screen
-      if (platform.y > canvas.height) {
+      if (platform.y > GAME_HEIGHT) {
         const spacing = getDynamicSpacing(lastPlatformY);
         lastPlatformY -= spacing;
         platform.y = lastPlatformY;
         platform.baseY = lastPlatformY;
-        platform.x = Math.random() * (canvas.width - platform.width);
+        platform.x = Math.random() * (GAME_WIDTH - platform.width);
         platform.falling = false;
         platform.timeOnTop = 0;
         platform.index = nextPlatformIndex++;
-        platform.hasStar = Math.random() < 0.1;
         platform.flagIndex = Math.floor(Math.random() * flagImages.length);
         platform.enemy = null;
         platform.moving = Math.random() < 0.06;
 
-        if (enemyIndices.has(platform.index)) {
+        const hasEnemy = enemyIndices.has(platform.index);
+        if (hasEnemy) {
           const type = (type1Count <= type2Count) ? 1 : 2;
           if (type === 1) type1Count++; else type2Count++;
           platform.enemy = {
@@ -516,16 +619,17 @@ function updateGame() {
             dir: 1
           };
         }
+        platform.hasStar = !hasEnemy && Math.random() < 0.1;
       }
     });
   }
 
   // Prevent player from moving out of bounds
-  if (player.x >= canvas.width - player.width) player.x = canvas.width - player.width;
+  if (player.x >= GAME_WIDTH - player.width) player.x = GAME_WIDTH - player.width;
   else if (player.x <= 0) player.x = 0;
 
   // Handle player landing on the ground
-  if (player.y > canvas.height) {
+  if (player.y > GAME_HEIGHT) {
   if (!isDying && !pendingGameOver) {
     isGameOver = true;
     showGameOver();
@@ -563,7 +667,7 @@ function updateGame() {
       player.velY = 0;
       player.y = platform.y - player.height;
 
-      const platformWorldHeight = worldOffset + (canvas.height - platform.y);
+      const platformWorldHeight = worldOffset + (GAME_HEIGHT - platform.y);
       if (platformWorldHeight > maxPlatformHeightReached) {
         const now = performance.now();
         const timeDiff = (now - lastLandingTime) / 1000;
@@ -654,12 +758,10 @@ function updateGame() {
       }
     }
 
-    // Draw platform index every 10 platforms
-    if (platform.index % 10 === 0) {
-      ctx.fillStyle = "white";
-      ctx.font = "12px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(`${platform.index}`, platform.x + platform.width / 2, platform.y + platform.height + 5);
+    // Safo reminder every 20 platforms
+    const safoMessage = getSafoMessage(platform.index);
+    if (safoMessage) {
+      drawSafoMessage(platform, safoMessage);
     }
 
     // Draw enemies
@@ -692,9 +794,27 @@ function updateGame() {
   ctx.textBaseline = "top";
   ctx.fillText(`Score: ${score}`, 20, 30);
 
+  ctx.restore();
+
   // --------- Request next frame ---------
   requestAnimationFrame(updateGame);
 }
+
+// Draw idle frame on the start screen
+(function drawIdleFrame() {
+  if (startOverlay.style.display === 'none') return;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const { scale, offsetX, offsetY } = getDisplayTransform();
+  ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+  if (backgroundImage.complete) {
+    ctx.drawImage(backgroundImage, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+  }
+  ctx.restore();
+  requestAnimationFrame(drawIdleFrame);
+})();
 
 </script>
 </body>
